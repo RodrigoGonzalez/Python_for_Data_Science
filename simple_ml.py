@@ -106,10 +106,9 @@ def load_attribute_names_and_values(filename):
     attribute_names_and_values = [] # this will be a list of dicts
     with open(filename) as f:
         for line in f:
-            attribute_name_and_value_dict = {}
             attribute_name_and_value_string_list = line.strip().split(':')
             attribute_name = attribute_name_and_value_string_list[0]
-            attribute_name_and_value_dict['name'] = attribute_name
+            attribute_name_and_value_dict = {'name': attribute_name}
             if len(attribute_name_and_value_string_list) < 2:
                 attribute_name_and_value_dict['values'] = None # no values for this attribute
             else:
@@ -135,7 +134,7 @@ def attribute_values(instances, attribute_index):
     attribute_index is expected bo be a the position of attribute in instances.
     
     See http://www.peterbe.com/plog/uniqifiers-benchmark for variants on this algorirthm'''
-    return list(set([x[attribute_index] for x in instances]))
+    return list({x[attribute_index] for x in instances})
 
 
 def attribute_value(instance, attribute, attribute_names):
@@ -144,9 +143,8 @@ def attribute_value(instance, attribute, attribute_names):
     Based on the position of attribute in the list of attribute_names'''
     if attribute not in attribute_names:
         return None
-    else:
-        i = attribute_names.index(attribute)
-        return instance[i] # using the parameter name here
+    i = attribute_names.index(attribute)
+    return instance[i] # using the parameter name here
         
 
 def print_attribute_names_and_values(instance, attribute_names):
@@ -172,7 +170,7 @@ def print_all_attribute_value_counts(instances, attribute_names):
     num_instances = len(instances)
     for attribute in attribute_names:
         value_counts = attribute_value_counts(instances, attribute, attribute_names)
-        print('{}:'.format(attribute), end=' ')
+        print(f'{attribute}:', end=' ')
         for value, count in sorted(value_counts.items(), key=operator.itemgetter(1), reverse=True):
             print('{} = {} ({:5.3f}),'.format(value, count, count / num_instances), end=' ')
         print()
@@ -191,8 +189,7 @@ def entropy(instances, class_index=0, attribute_name=None, value_name=None):
         return 0
     attribute_entropy = 0.0
     if attribute_name:
-        print('entropy({}{}) = '.format(attribute_name, 
-        	'={}'.format(value_name) if value_name else ''))
+        print(f"entropy({attribute_name}{f'={value_name}' if value_name else ''}) = ")
     for value in value_counts:
         value_probability = value_counts[value] / num_instances
         child_entropy = value_probability * math.log(value_probability, num_values)
@@ -280,29 +277,27 @@ def create_decision_tree(instances, candidate_attribute_indexes=None, class_inde
     if candidate_attribute_indexes is None:
         candidate_attribute_indexes = [i for i in range(len(instances[0])) if i != class_index]
         #candidate_attribute_indexes.remove(class_index)
-        
+
     class_labels_and_counts = Counter([instance[class_index] for instance in instances])
 
     # If the dataset is empty or the candidate attributes list is empty, return the default value
     if not instances or not candidate_attribute_indexes:
         if trace:
-            print('{}Using default class {}'.format('< ' * trace, default_class))
+            print(f"{'< ' * trace}Using default class {default_class}")
         return default_class
-    
-    # If all the instances have the same class label, return that class label
+
     elif len(class_labels_and_counts) == 1:
         class_label = class_labels_and_counts.most_common(1)[0][0]
         if trace:
-            print('{}All {} instances have label {}'.format('< ' * trace, 
-            	len(instances), class_label))
+            print(f"{'< ' * trace}All {len(instances)} instances have label {class_label}")
         return class_label
     else:
         default_class = simple_ml.majority_value(instances, class_index)
 
         # Choose the next best attribute index to best classify the instances
-        best_index = simple_ml.choose_best_attribute_index(instances, candidate_attribute_indexes, class_index)        
+        best_index = simple_ml.choose_best_attribute_index(instances, candidate_attribute_indexes, class_index)
         if trace:
-            print('{}Creating tree node for attribute index {}'.format('> ' * trace, best_index))
+            print(f"{'> ' * trace}Creating tree node for attribute index {best_index}")
 
         # Create a new decision tree node with the best attribute index and an empty dictionary object (for now)
         tree = {best_index:{}}
@@ -314,14 +309,10 @@ def create_decision_tree(instances, candidate_attribute_indexes=None, class_inde
         remaining_candidate_attribute_indexes = [i for i in candidate_attribute_indexes if i != best_index]
         for attribute_value in partitions:
             if trace:
-                print('{}Creating subtree for value {} ({}, {}, {}, {})'.format(
-                    '> ' * trace,
-                    attribute_value, 
-                    len(partitions[attribute_value]), 
-                    len(remaining_candidate_attribute_indexes), 
-                    class_index, 
-                    default_class))
-                
+                print(
+                    f"{'> ' * trace}Creating subtree for value {attribute_value} ({len(partitions[attribute_value])}, {len(remaining_candidate_attribute_indexes)}, {class_index}, {default_class})"
+                )
+
             # Create a subtree for each value of the the best attribute
             subtree = create_decision_tree(
                 partitions[attribute_value],
